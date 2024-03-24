@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public enum TileStatus
@@ -30,11 +32,14 @@ public class GridManager : MonoBehaviour
     [SerializeField] private Color[] colors;
     [SerializeField] private float baseTileCost = 1f;
     [SerializeField] private bool useManhattanHeuristic = true;
+    [SerializeField] private float shipRotationSpeed;
+    [SerializeField] private float shipMovementSpeed;
 
     private GameObject[,] grid;
     private int rows = 12;
     private int columns = 16;
     private List<GameObject> mines = new List<GameObject>();
+    private GameObject ship;
 
     public static GridManager Instance { get; private set; } // Static object of the class.
 
@@ -53,8 +58,9 @@ public class GridManager : MonoBehaviour
 
     private void Initialize()
     {
+        ship = GameObject.FindGameObjectWithTag("Ship");
         BuildGrid();
-        ConnectGrid();
+        ConnectGrid();      
     }
 
     void Update()
@@ -87,7 +93,7 @@ public class GridManager : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.F))
         {
-            GameObject ship = GameObject.FindGameObjectWithTag("Ship");
+            ship = GameObject.FindGameObjectWithTag("Ship");
             Vector2 shipIndecies = ship.GetComponent<NavigationObject>().GetGridIndex();
             PathNode start = grid[(int)shipIndecies.y, (int)shipIndecies.x].GetComponent<TileScript>().Node;
 
@@ -95,7 +101,13 @@ public class GridManager : MonoBehaviour
             Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
             PathNode goal = grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().Node;
 
-            PathManager.Instance.GetShortestPath(start, goal);
+            //HERE IS PATH + MOVEMENT
+            List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
+            Debug.Log(path.Count);
+            if (path != null)
+                StartCoroutine(MoveShipAlongPath(path));
+            else
+                Debug.LogWarning("Something with path");
         }
 
         if (Input.GetKeyDown(KeyCode.R))
@@ -131,7 +143,7 @@ public class GridManager : MonoBehaviour
             count--;
         }
         // Set the tile under the ship to Start.
-        GameObject ship = GameObject.FindGameObjectWithTag("Ship");
+        ship = GameObject.FindGameObjectWithTag("Ship");
         Vector2 shipIndices = ship.GetComponent<NavigationObject>().GetGridIndex();
         grid[(int)shipIndices.y, (int)shipIndices.x].GetComponent<TileScript>().SetStatus(TileStatus.START);
         // Set the tile under the player to Goal and set tile costs.
@@ -245,7 +257,7 @@ public class GridManager : MonoBehaviour
             grid[(int)mineIndex.y, (int)mineIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.IMPASSABLE);
         }
 
-        GameObject ship = GameObject.FindGameObjectWithTag("Ship");
+        ship = GameObject.FindGameObjectWithTag("Ship");
         Vector2 shipIndicies = ship.GetComponent<NavigationObject>().GetGridIndex();
         grid[(int)shipIndicies.y, (int)shipIndicies.x].GetComponent<TileScript>().SetStatus(TileStatus.START);
 
@@ -253,5 +265,35 @@ public class GridManager : MonoBehaviour
         Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
         grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().SetStatus(TileStatus.GOAL);
     }
+    IEnumerator MoveShipAlongPath(List<PathNode> path)
+    {
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            Vector3 startPosition = ship.transform.position;
+            Vector3 endPosition = path[i + 1].Tile.transform.position;
+            Vector3 direction = (endPosition - startPosition).normalized;
+
+            // Рассчитываем угол для поворота в 2D
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90; // Смещение на 90 градусов, если необходимо
+            Quaternion targetRotation = Quaternion.Euler(0, 0, angle);
+
+            // Плавный поворот к следующей точке
+            while (Quaternion.Angle(ship.transform.rotation, targetRotation) > 0.01f)
+            {
+                ship.transform.rotation = Quaternion.RotateTowards(ship.transform.rotation, targetRotation, shipRotationSpeed * Time.deltaTime);
+                yield return null; // Или можно использовать new WaitForEndOfFrame(), но разницы нет
+            }
+
+            // Движение к следующей точке
+            while (Vector3.Distance(ship.transform.position, endPosition) > 0.01f)
+            {
+                ship.transform.position = Vector3.MoveTowards(ship.transform.position, endPosition, shipMovementSpeed * Time.deltaTime);
+                yield return null; // Для плавного движения
+            }
+        }
+        // Завершающие действия после достижения пути
+    }
+
+
 }
 
