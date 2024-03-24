@@ -75,7 +75,7 @@ public class PathManager : MonoBehaviour
         path = new List<PathConnection>();
     }
 
-    public void GetShortestPath(PathNode start, PathNode goal)
+    public List<PathNode> GetShortestPath(PathNode start, PathNode goal)
     {
         if(path.Count > 0)
         {
@@ -128,7 +128,7 @@ public class PathManager : MonoBehaviour
             closeList.Add(currentRecord);
             currentRecord.Node.Tile.GetComponent<TileScript>().SetStatus(TileStatus.CLOSED);
         }
-        if (currentRecord == null) return;
+        if (currentRecord == null) return null;
         if(currentRecord.Node!=goal)
         {
             Debug.Log("could not find path to goal");
@@ -146,6 +146,12 @@ public class PathManager : MonoBehaviour
         }
         openList.Clear();
         closeList.Clear();
+        List<PathNode> pathList = new List<PathNode>();
+        foreach(PathConnection connection in path)
+        {
+            pathList.Add(connection.ToNode);
+        }
+        return pathList;
     }
 
     public NodeRecord GetSmallestNode()
