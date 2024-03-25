@@ -248,6 +248,8 @@ MonoBehaviour:
   tilePanelPrefab: {fileID: 4241275179398536238, guid: 035f4db22f86ab449a23604f6534fc44, type: 3}
   panelParent: {fileID: 1574120919}
   minePrefab: {fileID: 6537141037928142162, guid: 3aae427a40059ed4aab13ca36c2d691b, type: 3}
+  planetPrefab: {fileID: 201472231989359469, guid: 65b303e39d61fdc4fa07687bb9a80558, type: 3}
+  shipPrefab: {fileID: 6073611016518656805, guid: c4c5aabf4600a2d4296c618bc89878e7, type: 3}
   colors:
   - {r: 0, g: 0.5019608, b: 0.5019608, a: 0.5019608}
   - {r: 0, g: 0.2509804, b: 0.5019608, a: 0.5019608}
@@ -380,7 +382,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 600459650}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3fcc80134aee54095060bbbb8aa855, type: 3}
   m_Name: 

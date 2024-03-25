@@ -49,9 +49,11 @@ public class TileScript : MonoBehaviour
                 tilePanel.statusText.text = "U";
                 break;
             case TileStatus.OPEN:
+                gameObject.GetComponent<SpriteRenderer>().color = original;
                 tilePanel.statusText.text = "O";
                 break;
             case TileStatus.CLOSED:
+                gameObject.GetComponent<SpriteRenderer>().color = original;
                 tilePanel.statusText.text = "C";
                 break;
             case TileStatus.IMPASSABLE:

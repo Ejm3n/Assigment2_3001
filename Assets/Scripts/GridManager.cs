@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 
 public enum TileStatus
@@ -29,6 +28,8 @@ public class GridManager : MonoBehaviour
     [SerializeField] private GameObject tilePanelPrefab;
     [SerializeField] private GameObject panelParent;
     [SerializeField] private GameObject minePrefab;
+    [SerializeField] private GameObject planetPrefab;
+    [SerializeField] private GameObject shipPrefab;
     [SerializeField] private Color[] colors;
     [SerializeField] private float baseTileCost = 1f;
     [SerializeField] private bool useManhattanHeuristic = true;
@@ -60,7 +61,7 @@ public class GridManager : MonoBehaviour
     {
         ship = GameObject.FindGameObjectWithTag("Ship");
         BuildGrid();
-        ConnectGrid();      
+        ConnectGrid();
     }
 
     void Update()
@@ -71,6 +72,7 @@ public class GridManager : MonoBehaviour
                 child.gameObject.SetActive(!child.gameObject.activeSelf);
             panelParent.gameObject.SetActive(!panelParent.gameObject.activeSelf);
         }
+
         if (Input.GetKeyDown(KeyCode.M))
         {
             Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
@@ -80,16 +82,48 @@ public class GridManager : MonoBehaviour
             mines.Add(mineInst);
             ConnectGrid();
         }
-        if (Input.GetKeyDown(KeyCode.C))
+
+        if (Input.GetMouseButtonDown(0))
         {
+            Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+            
+            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Planet").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+                return;
             foreach (GameObject mine in mines)
             {
-                Vector2 mineIndex = mine.GetComponent<NavigationObject>().GetGridIndex();
-                grid[(int)mineIndex.y, (int)mineIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.UNVISITED);
-                Destroy(mine);
+                if (Vector2.Distance(mine.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+                    return;
             }
-            mines.Clear();
+            ship = GameObject.FindGameObjectWithTag("Ship");
+            Vector2 tileIndex = ship.GetComponent<NavigationObject>().GetGridIndex();
+            GetGrid()[(int)tileIndex.y, (int)tileIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.UNVISITED);
+            Destroy(ship);
+            ship = Instantiate(shipPrefab, new Vector3(gridPosition.x, gridPosition.y, 0f), Quaternion.identity);
+            Vector2 shipIndex = ship.GetComponent<NavigationObject>().GetGridIndex();
+            grid[(int)shipIndex.y, (int)shipIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.START);
             ConnectGrid();
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+            
+            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Ship").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+                return;
+            foreach (GameObject mine in mines)
+            {
+                if (Vector2.Distance(mine.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+                    return;
+            }
+            GameObject planet = GameObject.FindGameObjectWithTag("Planet");
+            Vector2 tileIndex = planet.GetComponent<NavigationObject>().GetGridIndex();
+            GetGrid()[(int)tileIndex.y, (int)tileIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.UNVISITED);
+            Destroy(planet);
+            planet = Instantiate(planetPrefab, new Vector3(gridPosition.x, gridPosition.y, 0f), Quaternion.identity);
+            Vector2 planetIndex = planet.GetComponent<NavigationObject>().GetGridIndex();
+            grid[(int)planetIndex.y, (int)planetIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.GOAL);
+            ConnectGrid();
+
         }
         if (Input.GetKeyDown(KeyCode.F))
         {
@@ -103,7 +137,19 @@ public class GridManager : MonoBehaviour
 
             //HERE IS PATH + MOVEMENT
             List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
-            Debug.Log(path.Count);
+        }
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            ship = GameObject.FindGameObjectWithTag("Ship");
+            Vector2 shipIndecies = ship.GetComponent<NavigationObject>().GetGridIndex();
+            PathNode start = grid[(int)shipIndecies.y, (int)shipIndecies.x].GetComponent<TileScript>().Node;
+
+            GameObject planet = GameObject.FindGameObjectWithTag("Planet");
+            Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
+            PathNode goal = grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().Node;
+
+            //HERE IS PATH + MOVEMENT
+            List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
             if (path != null)
                 StartCoroutine(MoveShipAlongPath(path));
             else
