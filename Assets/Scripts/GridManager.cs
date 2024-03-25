@@ -349,6 +349,7 @@ public class GridManager : MonoBehaviour
     }
     IEnumerator MoveShipAlongPath(List<PathNode> path)
     {
+        SoundManager.Instance.PlaySound("Engine");
         moving = true;
         for (int i = 0; i < path.Count - 1; i++)
         {
@@ -372,6 +373,7 @@ public class GridManager : MonoBehaviour
             }
         }
         moving = false;
+        SoundManager.Instance.PlaySound("Finish");
     }
 
 
