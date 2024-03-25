@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -38,6 +39,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] private float shipRotationSpeed;
     [SerializeField] private float shipMovementSpeed;
     [SerializeField] private GameObject[] mines;
+    [SerializeField] private TMP_Text totalCostText;
     private GameObject[,] grid;
     private int rows = 12;
     private int columns = 16;
@@ -122,7 +124,7 @@ public class GridManager : MonoBehaviour
                 return;
             foreach (GameObject mine in mines)
             {
-                if (Vector2.Distance(mine.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+                if (Vector2.Distance(mine.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
                     return;
             }
             GameObject planet = GameObject.FindGameObjectWithTag("Planet");
@@ -133,7 +135,7 @@ public class GridManager : MonoBehaviour
             Vector2 planetIndex = planet.GetComponent<NavigationObject>().GetGridIndex();
             grid[(int)planetIndex.y, (int)planetIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.GOAL);
             ConnectGrid();
-
+            SetTileCosts(planetIndex);
         }
         if (Input.GetKeyDown(KeyCode.F))
         {
@@ -147,6 +149,7 @@ public class GridManager : MonoBehaviour
 
             //HERE IS PATH + MOVEMENT
             List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
+            totalCostText.text = PathManager.Instance.GetTotalCost(start, goal).ToString();
         }
         if (Input.GetKeyDown(KeyCode.S))
         {
@@ -160,6 +163,7 @@ public class GridManager : MonoBehaviour
 
             //HERE IS PATH + MOVEMENT
             List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
+            totalCostText.text = PathManager.Instance.GetTotalCost(start, goal).ToString();
             if (path != null)
                 StartCoroutine(MoveShipAlongPath(path));
             else
@@ -209,6 +213,8 @@ public class GridManager : MonoBehaviour
         Vector2 planetIndices = planet.GetComponent<NavigationObject>().GetGridIndex();
         grid[(int)planetIndices.y, (int)planetIndices.x].GetComponent<TileScript>().SetStatus(TileStatus.GOAL);
         SetTileCosts(planetIndices);
+        foreach (Transform child in transform)
+            child.gameObject.SetActive(false);
     }
 
     public void ConnectGrid()
