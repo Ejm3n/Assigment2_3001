@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public enum TileStatus
 {
@@ -27,6 +28,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] private GameObject tilePrefab;
     [SerializeField] private GameObject tilePanelPrefab;
     [SerializeField] private GameObject panelParent;
+    [SerializeField] private GameObject instructionPanel;
     [SerializeField] private GameObject minePrefab;
     [SerializeField] private GameObject planetPrefab;
     [SerializeField] private GameObject shipPrefab;
@@ -35,11 +37,10 @@ public class GridManager : MonoBehaviour
     [SerializeField] private bool useManhattanHeuristic = true;
     [SerializeField] private float shipRotationSpeed;
     [SerializeField] private float shipMovementSpeed;
-
+    [SerializeField] private GameObject[] mines;
     private GameObject[,] grid;
     private int rows = 12;
     private int columns = 16;
-    private List<GameObject> mines = new List<GameObject>();
     private GameObject ship;
 
     public static GridManager Instance { get; private set; } // Static object of the class.
@@ -71,27 +72,36 @@ public class GridManager : MonoBehaviour
             foreach (Transform child in transform)
                 child.gameObject.SetActive(!child.gameObject.activeSelf);
             panelParent.gameObject.SetActive(!panelParent.gameObject.activeSelf);
+            instructionPanel.SetActive(!instructionPanel.activeSelf);
         }
-
-        if (Input.GetKeyDown(KeyCode.M))
+        if (Input.GetKeyDown(KeyCode.C))
         {
-            Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            GameObject mineInst = GameObject.Instantiate(minePrefab, new Vector3(gridPosition.x, gridPosition.y, 0f), Quaternion.identity);
-            Vector2 mineIndex = mineInst.GetComponent<NavigationObject>().GetGridIndex();
-            grid[(int)mineIndex.y, (int)mineIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.IMPASSABLE);
-            mines.Add(mineInst);
-            ConnectGrid();
+            SetTileStatuses();
         }
+        if(Input.GetKeyDown(KeyCode.R))
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+        //SPAWN MINES
+        //if (Input.GetKeyDown(KeyCode.M))
+        //{
+        //    Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+        //    GameObject mineInst = GameObject.Instantiate(minePrefab, new Vector3(gridPosition.x, gridPosition.y, 0f), Quaternion.identity);
+        //    Vector2 mineIndex = mineInst.GetComponent<NavigationObject>().GetGridIndex();
+        //    grid[(int)mineIndex.y, (int)mineIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.IMPASSABLE);
+        //   // mines.Add(mineInst);
+        //    ConnectGrid();
+        //}
 
         if (Input.GetMouseButtonDown(0))
         {
             Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
             
-            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Planet").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Planet").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
                 return;
             foreach (GameObject mine in mines)
             {
-                if (Vector2.Distance(mine.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+                if (Vector2.Distance(mine.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
                     return;
             }
             ship = GameObject.FindGameObjectWithTag("Ship");
@@ -108,7 +118,7 @@ public class GridManager : MonoBehaviour
         {
             Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
             
-            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Ship").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < 1f)
+            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Ship").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
                 return;
             foreach (GameObject mine in mines)
             {
@@ -156,10 +166,7 @@ public class GridManager : MonoBehaviour
                 Debug.LogWarning("Something with path");
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            SetTileStatuses();
-        }
+      
     }
 
     private void BuildGrid()
@@ -187,6 +194,11 @@ public class GridManager : MonoBehaviour
                 tileScript.Node = new PathNode(tileInst);
             }
             count--;
+        }
+        foreach(GameObject mine in mines)
+        {
+            Vector2 mineIndex = mine.GetComponent<NavigationObject>().GetGridIndex();
+            grid[(int)mineIndex.y, (int)mineIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.IMPASSABLE);
         }
         // Set the tile under the ship to Start.
         ship = GameObject.FindGameObjectWithTag("Ship");
