@@ -66,7 +66,7 @@ public class GridManager : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.G))
+        if (Input.GetKeyDown(KeyCode.H))
         {
             foreach (Transform child in transform)
                 child.gameObject.SetActive(!child.gameObject.activeSelf);
