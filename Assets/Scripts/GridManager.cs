@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -40,6 +41,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] private float shipMovementSpeed;
     [SerializeField] private GameObject[] mines;
     [SerializeField] private TMP_Text totalCostText;
+    private bool moving = false;
     private GameObject[,] grid;
     private int rows = 12;
     private int columns = 16;
@@ -65,6 +67,7 @@ public class GridManager : MonoBehaviour
         ship = GameObject.FindGameObjectWithTag("Ship");
         BuildGrid();
         ConnectGrid();
+       
     }
 
     void Update()
@@ -97,6 +100,8 @@ public class GridManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
+            if (moving)
+                return;
             Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
             
             if (Vector2.Distance(GameObject.FindGameObjectWithTag("Planet").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
@@ -118,9 +123,11 @@ public class GridManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(1))
         {
+            if (moving)
+                return;
             Vector2 gridPosition = GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            
-            if (Vector2.Distance(GameObject.FindGameObjectWithTag("Ship").transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
+            ship = GameObject.FindGameObjectWithTag("Ship");
+            if (Vector2.Distance(ship.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition)) < .7f)
                 return;
             foreach (GameObject mine in mines)
             {
@@ -135,44 +142,55 @@ public class GridManager : MonoBehaviour
             Vector2 planetIndex = planet.GetComponent<NavigationObject>().GetGridIndex();
             grid[(int)planetIndex.y, (int)planetIndex.x].GetComponent<TileScript>().SetStatus(TileStatus.GOAL);
             ConnectGrid();
+
             SetTileCosts(planetIndex);
+           // ShowPathCost(ship,planet);
         }
         if (Input.GetKeyDown(KeyCode.F))
         {
-            ship = GameObject.FindGameObjectWithTag("Ship");
-            Vector2 shipIndecies = ship.GetComponent<NavigationObject>().GetGridIndex();
-            PathNode start = grid[(int)shipIndecies.y, (int)shipIndecies.x].GetComponent<TileScript>().Node;
-
-            GameObject planet = GameObject.FindGameObjectWithTag("Planet");
-            Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
-            PathNode goal = grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().Node;
-
-            //HERE IS PATH + MOVEMENT
-            List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
-            totalCostText.text = PathManager.Instance.GetTotalCost(start, goal).ToString();
+            if (moving)
+                return;
+            ShowPath();
         }
         if (Input.GetKeyDown(KeyCode.S))
         {
-            ship = GameObject.FindGameObjectWithTag("Ship");
-            Vector2 shipIndecies = ship.GetComponent<NavigationObject>().GetGridIndex();
-            PathNode start = grid[(int)shipIndecies.y, (int)shipIndecies.x].GetComponent<TileScript>().Node;
-
-            GameObject planet = GameObject.FindGameObjectWithTag("Planet");
-            Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
-            PathNode goal = grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().Node;
-
-            //HERE IS PATH + MOVEMENT
-            List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
-            totalCostText.text = PathManager.Instance.GetTotalCost(start, goal).ToString();
+            if (moving)
+                return;
+            List<PathNode> path = ShowPath();
             if (path != null)
                 StartCoroutine(MoveShipAlongPath(path));
             else
                 Debug.LogWarning("Something with path");
         }
-
-      
     }
+    private List<PathNode> ShowPath()
+    {
+        ship = GameObject.FindGameObjectWithTag("Ship");
+        Vector2 shipIndecies = ship.GetComponent<NavigationObject>().GetGridIndex();
+        PathNode start = grid[(int)shipIndecies.y, (int)shipIndecies.x].GetComponent<TileScript>().Node;
 
+        GameObject planet = GameObject.FindGameObjectWithTag("Planet");
+        Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
+        PathNode goal = grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().Node;
+
+        //HERE IS PATH 
+        List<PathNode> path = PathManager.Instance.GetShortestPath(start, goal);
+        totalCostText.text = PathManager.Instance.GetTotalCost(start, goal).ToString();
+        return path;
+    }
+    private void ShowPathCost(GameObject ship, GameObject planet)
+    {
+        
+        Vector2 shipIndecies = ship.GetComponent<NavigationObject>().GetGridIndex();
+        PathNode start = grid[(int)shipIndecies.y, (int)shipIndecies.x].GetComponent<TileScript>().Node;
+
+        
+        Vector2 planetIndicies = planet.GetComponent<NavigationObject>().GetGridIndex();
+        PathNode goal = grid[(int)planetIndicies.y, (int)planetIndicies.x].GetComponent<TileScript>().Node; 
+       
+        totalCostText.text = PathManager.Instance.GetTotalCost(start, goal).ToString();
+       
+    }
     private void BuildGrid()
     {
         grid = new GameObject[rows, columns];
@@ -331,31 +349,29 @@ public class GridManager : MonoBehaviour
     }
     IEnumerator MoveShipAlongPath(List<PathNode> path)
     {
+        moving = true;
         for (int i = 0; i < path.Count - 1; i++)
         {
             Vector3 startPosition = ship.transform.position;
             Vector3 endPosition = path[i + 1].Tile.transform.position;
             Vector3 direction = (endPosition - startPosition).normalized;
 
-            // Рассчитываем угол для поворота в 2D
-            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90; // Смещение на 90 градусов, если необходимо
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90; 
             Quaternion targetRotation = Quaternion.Euler(0, 0, angle);
 
-            // Плавный поворот к следующей точке
             while (Quaternion.Angle(ship.transform.rotation, targetRotation) > 0.01f)
             {
                 ship.transform.rotation = Quaternion.RotateTowards(ship.transform.rotation, targetRotation, shipRotationSpeed * Time.deltaTime);
-                yield return null; // Или можно использовать new WaitForEndOfFrame(), но разницы нет
+                yield return null; 
             }
-
-            // Движение к следующей точке
+         
             while (Vector3.Distance(ship.transform.position, endPosition) > 0.01f)
             {
                 ship.transform.position = Vector3.MoveTowards(ship.transform.position, endPosition, shipMovementSpeed * Time.deltaTime);
-                yield return null; // Для плавного движения
+                yield return null; 
             }
         }
-        // Завершающие действия после достижения пути
+        moving = false;
     }
 
 
